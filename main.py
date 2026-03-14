@@ -2,10 +2,10 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 1. TƏMİZ VƏ RƏSMİ DİZAYN (Streamlit-in öz standart görünüşü)
+# 1. TƏMİZ VƏ RƏSMİ DİZAYN
 st.set_page_config(page_title="A-Zəka PRO", page_icon="🌐", layout="centered")
 
-# 2. BEYİN VƏ YANACAQ
+# 2. BEYİN VƏ YANACAQ (Sənin açarın)
 API_KEY = "AIzaSyBprup0Op0xws6tbcoKwokDRKzez_OHVjI"
 genai.configure(api_key=API_KEY)
 
@@ -19,6 +19,7 @@ QƏTİ QAYDALAR:
 4. LATEX QƏTİ QADAĞANDIR: Heç bir halda LaTeX (\[ \], \( \), \boxed) istifadə etmə. Rəqəmləri və düsturları təmiz mətn kimi yaz!
 """
 
+# Bax bura! "-latest" sözü artıq yoxdur!
 model = genai.GenerativeModel(
     model_name='gemini-1.5-pro',
     system_instruction=system_instruction
@@ -45,11 +46,11 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# 6. ŞƏKİL YÜKLƏMƏ (Sadə və işlək)
+# 6. ŞƏKİL YÜKLƏMƏ 
 st.divider()
 uploaded_file = st.file_uploader("➕ Sualın və ya misalın şəklini əlavə et", type=["png", "jpg", "jpeg"])
 
-# 7. YAZI QUTUSU (Artıq tam rahat işləyəcək)
+# 7. YAZI QUTUSU 
 if prompt := st.chat_input("Dahi A-Zəka-ya yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
