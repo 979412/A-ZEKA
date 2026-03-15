@@ -7,7 +7,7 @@ st.set_page_config(page_title="A-Zəka | Ultra Alim", page_icon="🧠", layout="
 
 # 2. API AÇARI (Bura öz açarını daxil et)
 API_KEY = "SƏNİN_API_AÇARIN" 
-
+API_KEY = "AIzaSyBprup0Op0xws6tbcoKwokDRKzez_OHVjI"
 # 3. SOL PANEL: BEYİN SEÇİCİ
 with st.sidebar:
     st.title("⚙️ İdarəetmə Paneli")
