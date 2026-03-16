@@ -54,7 +54,7 @@ if prompt:
         with st.spinner("A-Zəka analiz edir..."):
             
             # Daha stabil olan v1 model ünvanı
-            url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+           url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
             
             system_instruction = "Sən 'A-Zəka'-san. Səni dahi proqramçı Abdullah Mikayılov yaradıb. Sən hər şeyi bilən Ultra Alimsən. Sualları mütləq addım-addım və çox dəqiq izah etməlisən."
             
