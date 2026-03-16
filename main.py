@@ -14,7 +14,7 @@ st.markdown("""
 
 # 2. API AÇARI - DİQQƏT: Yeni aldığın açarı bura yapışdır!
 # Bura bir daha mesaj kimi açar göndərmə, sadəcə öz faylında dəyiş.
-API_KEY = "BURA_YENI_API_KEY_YAPISDIR"
+API_KEY = "AIzaSyDGICc3XJwxz4L_hlrdxb-Sog9ILawbmfk"
 
 # 3. YADDAŞ SİSTEMİ
 if "messages" not in st.session_state:
