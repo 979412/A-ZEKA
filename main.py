@@ -19,7 +19,7 @@ st.markdown("""
 # ==========================================
 # 2. API QURULUMU (ZİREHLİ YANAŞMA)
 # ==========================================
-API_KEY = "AIzaSyDGICc3XJwxz4L_hlrdxb-Sog9ILawbmfk"
+API_KEY = "AIzaSyDz-rB4RGABHiz1S9bQ4OutCY61v39b8Eo"
 genai.configure(api_key=API_KEY)
 
 # ==========================================
