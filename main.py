@@ -13,7 +13,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # 2. SƏNİN YENİ API AÇARIN (Artıq əlavə edilib!)
-API_KEY = "AIzaSyAvjqVkN1DsdCd7uX52TuosAZze_NmbKy0"
+API_KEY = "AIzaSyAFw0IJdZjDYwXaool2vneGUNSeHvLSDFs"
 # 3. YADDAŞ SİSTEMİ
 if "messages" not in st.session_state:
     st.session_state.messages = []
