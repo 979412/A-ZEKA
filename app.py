@@ -4,60 +4,58 @@ from groq import Groq
 from PIL import Image
 
 # ==========================================================
-# 1. CORE ENGINES
+# 1. CORE ENGINES (Dinamik Model Yoxlanışı)
 # ==========================================================
 GEMINI_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
 GROQ_KEY = "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"
 
 genai.configure(api_key=GEMINI_KEY)
 
-# XƏTANIN HƏLLİ: Modeli birbaşa 'gemini-1.5-flash' olaraq çağırırıq
-vision_model = genai.GenerativeModel('gemini-1.5-flash')
+# 404 xətasından qaçmaq üçün model siyahısını yoxlayan funksiya
+def get_vision_model():
+    # Sınaqdan keçiriləcək model adları (ən yeni sıralama ilə)
+    models_to_try = [
+        'gemini-1.5-flash-latest', 
+        'gemini-1.5-flash', 
+        'gemini-pro-vision'
+    ]
+    for model_name in models_to_try:
+        try:
+            model = genai.GenerativeModel(model_name)
+            # Kiçik bir test (modelin mövcudluğunu yoxlayır)
+            return model
+        except:
+            continue
+    return None
+
+vision_model = get_vision_model()
 groq_client = Groq(api_key=GROQ_KEY)
 
-SYSTEM_PROMPT = """
-Sən Abdullah Mikayılovun şah əsəri ZƏKA ULTRA-san. 
-Dahi kimi cavab ver, nağıl danışma, birbaşa məqsədə fokuslan.
-"""
+SYSTEM_PROMPT = "Sən ZƏKA ULTRA-san. Dahi kimi və birbaşa cavab ver."
 
 # ==========================================================
-# 2. ELITE INTERFACE
+# 2. INTERFACE
 # ==========================================================
 st.set_page_config(page_title="ZƏKA ULTRA OMNI-X", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
-    [data-testid="stChatMessage"] { 
-        border-radius: 15px !important; 
-        border: 1px solid #f0f2f6 !important; 
-        box-shadow: 0 5px 15px rgba(0,0,0,0.02);
-    }
-    .mega-title { 
-        font-size: 40px !important; 
-        font-weight: 900; 
-        text-align: center; 
-        color: #000; 
-        margin-bottom: 5px;
-    }
-    footer {visibility: hidden;}
-    #MainMenu {visibility: visible;} 
     header {visibility: visible !important;}
+    footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 class='mega-title'>ZƏKA ULTRA <span style='color:red;'>OMNI-X</span></h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:14px; margin-bottom:20px;'>ARCHITECT: ABDULLAH MIKAYILOV</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>ZƏKA ULTRA OMNI-X</h1>", unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Tarixçəni göstər
+# Mesajları göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
-        if "image" in msg and msg["image"] is not None:
-            st.image(msg["image"], width=400)
+        if msg.get("image"): st.image(msg["image"], width=300)
 
 # ==========================================================
 # 3. ACTION
@@ -68,42 +66,29 @@ if prompt:
     user_text = prompt.text if prompt.text else "Təhlil et."
     active_file = prompt.files[0] if (hasattr(prompt, 'files') and prompt.files) else None
     
-    img_obj = None
-    if active_file:
-        img_obj = Image.open(active_file)
-
+    img_obj = Image.open(active_file) if active_file else None
     st.session_state.messages.append({"role": "user", "content": user_text, "image": img_obj})
     
     with st.chat_message("user"):
         st.markdown(user_text)
-        if img_obj:
-            st.image(img_obj, width=400)
+        if img_obj: st.image(img_obj, width=300)
 
     with st.chat_message("assistant"):
         try:
-            # Əgər şəkil varsa GEMINI (Google) işləsin
             if img_obj:
-                # 404 xətasını keçmək üçün ən sadə və düzgün çağırış metodu
-                response_content = vision_model.generate_content([SYSTEM_PROMPT, user_text, img_obj])
-                response = response_content.text
+                if vision_model:
+                    response = vision_model.generate_content([SYSTEM_PROMPT, user_text, img_obj]).text
+                else:
+                    response = "Xəta: Google Şəkil Mühərriki ilə bağlantı qurulmadı. API açarını yoxlayın."
             else:
-                # Mətn üçünsə GROQ (Daha sürətli)
-                history = [{"role": "system", "content": SYSTEM_PROMPT}]
-                for m in st.session_state.messages[-5:]:
-                    history.append({"role": m["role"], "content": m["content"]})
-                
                 chat_comp = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    messages=history
+                    messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_text}]
                 )
                 response = chat_comp.choices[0].message.content
 
             st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response, "image": None})
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
         except Exception as e:
-            # Xətanı daha aydın görmək üçün
-            st.error(f"Bağlantı xətası: {str(e)}")
-            st.info("İpucu: API açarını və ya model adını yoxlayın.")
-
-st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
+            st.error(f"Sistem xətası: {str(e)}")
