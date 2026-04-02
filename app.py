@@ -7,29 +7,28 @@ from PIL import Image
 import io
 
 # ==========================================================
-# 1. CORE ENGINES - RAW API OVERRIDE
+# 1. CORE ENGINES - RAW HTTP OVERRIDE
 # ==========================================================
 GEMINI_KEY = "AIzaSyD-X3b959YWreNUSgMj9V1QqNIXKN2o9U0"
 GROQ_KEY = "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"
 
 groq_client = Groq(api_key=GROQ_KEY)
 
-# Şəkli bazaya çevirmək üçün funksiya
 def encode_image(image):
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG")
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-# BİRBAŞA GOOGLE API SORĞUSU (HƏLL BURADADIR)
-def call_gemini_raw(prompt, image):
+def call_gemini_raw(prompt_text, image_obj):
+    # DİQQƏT: v1beta yox, birbaşa v1 stabil versiyasına müraciət edirik
     url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
     
-    image_base64 = encode_image(image)
+    image_base64 = encode_image(image_obj)
     
     payload = {
         "contents": [{
             "parts": [
-                {"text": prompt},
+                {"text": prompt_text},
                 {
                     "inline_data": {
                         "mime_type": "image/jpeg",
@@ -43,27 +42,33 @@ def call_gemini_raw(prompt, image):
     headers = {'Content-Type': 'application/json'}
     response = requests.post(url, headers=headers, data=json.dumps(payload))
     
-    if response.status_status == 200:
-        return response.json()['candidates'][0]['content']['parts'][0]['text']
+    # Xəta buradakı 'status_code' hissəsində idi, düzəldildi:
+    if response.status_code == 200:
+        res_json = response.json()
+        try:
+            return res_json['candidates'][0]['content']['parts'][0]['text']
+        except:
+            return "Analiz tamamlandı, lakin cavab formatlaşdırıla bilmədi."
     else:
-        return f"Xəta: {response.text}"
+        return f"Mühərrik cavab vermir (Kod: {response.status_code}). Detal: {response.text}"
 
-SYSTEM_PROMPT = "Sən ZƏKA ULTRA-san. Dahi kimi cavab ver."
+SYSTEM_PROMPT = "Sən ZƏKA ULTRA-san. Dahi kimi cavab ver. Azərbaycan dilində danış."
 
 # ==========================================================
-# 2. INTERFACE
+# 2. ELITE INTERFACE
 # ==========================================================
 st.set_page_config(page_title="ZƏKA ULTRA OMNI-X", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
-    header {visibility: visible !important;}
+    [data-testid="stChatMessage"] { border-radius: 15px !important; border: 1px solid #f0f2f6 !important; }
     footer {visibility: hidden;}
+    header {visibility: visible !important;}
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center;'>ZƏKA ULTRA OMNI-X</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-weight:900;'>ZƏKA ULTRA <span style='color:red;'>OMNI-X</span></h1>", unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -79,7 +84,7 @@ for msg in st.session_state.messages:
 prompt = st.chat_input("Əmr edin, Memar...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Təhlil et."
+    user_text = prompt.text if prompt.text else "Bu şəkli dərindən analiz et."
     active_file = prompt.files[0] if (hasattr(prompt, 'files') and prompt.files) else None
     
     img_obj = Image.open(active_file) if active_file else None
@@ -92,13 +97,14 @@ if prompt:
     with st.chat_message("assistant"):
         try:
             if img_obj:
-                # BİRBAŞA RAW API İLƏ ANALİZ
-                response = call_gemini_raw(SYSTEM_PROMPT + " " + user_text, img_obj)
+                # RAW HTTP CALL
+                with st.spinner("Zəka Ultra şəkli analiz edir..."):
+                    response = call_gemini_raw(SYSTEM_PROMPT + " " + user_text, img_obj)
             else:
-                # Mətn üçün Groq
+                # GROQ CALL
                 chat_comp = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    messages=[{"role": "user", "content": user_text}]
+                    messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_text}]
                 )
                 response = chat_comp.choices[0].message.content
 
@@ -106,4 +112,6 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": response})
 
         except Exception as e:
-            st.error(f"Sistem bərpa olunur: {str(e)}")
+            st.error(f"Kritik Xəta: {str(e)}")
+
+st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
