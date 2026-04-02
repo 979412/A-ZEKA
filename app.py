@@ -4,29 +4,22 @@ from groq import Groq
 from PIL import Image
 
 # ==========================================================
-# 1. CORE ENGINES - UNIVERSAL ACCESS
+# 1. CORE ENGINES (IRONCLAD CONFIG)
 # ==========================================================
 GEMINI_KEY = "AIzaSyD-X3b959YWreNUSgMj9V1QqNIXKN2o9U0"
 GROQ_KEY = "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"
 
 genai.configure(api_key=GEMINI_KEY)
-
-# 404 XƏTASINI KÖKÜNDƏN KƏSƏN MƏNTİQ
-def load_vision_model():
-    # Birinci ən stabil köhnə modeli yoxlayırıq (Çünki o hər serverdə var)
-    try:
-        return genai.GenerativeModel('gemini-pro-vision')
-    except:
-        # Əgər o da olmasa, ən son flah modelini sınayırıq
-        return genai.GenerativeModel('gemini-1.5-flash')
-
-vision_model = load_vision_model()
 groq_client = Groq(api_key=GROQ_KEY)
 
-SYSTEM_PROMPT = "Sən ZƏKA ULTRA-san. Dahi kimi cavab ver. Azərbaycan dilində danış."
+SYSTEM_PROMPT = """
+Sən Abdullah Mikayılovun şah əsəri ZƏKA ULTRA-san. 
+Dahi kimi cavab ver. Şəkilləri və mətni mükəmməl analiz edirsən.
+Azərbaycan dilində ən yüksək səviyyədə cavab ver.
+"""
 
 # ==========================================================
-# 2. ELITE INTERFACE
+# 2. INTERFACE
 # ==========================================================
 st.set_page_config(page_title="ZƏKA ULTRA OMNI-X", layout="wide")
 
@@ -39,7 +32,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center;'>ZƏKA ULTRA OMNI-X</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-weight:900;'>ZƏKA ULTRA <span style='color:red;'>OMNI-X</span></h1>", unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -50,12 +43,12 @@ for msg in st.session_state.messages:
         if msg.get("image"): st.image(msg["image"], width=400)
 
 # ==========================================================
-# 3. ACTION
+# 3. SMART ANALYZER
 # ==========================================================
 prompt = st.chat_input("Əmr edin, Memar...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Bu şəkli analiz et."
+    user_text = prompt.text if prompt.text else "Bu faylı analiz et."
     active_file = prompt.files[0] if (hasattr(prompt, 'files') and prompt.files) else None
     
     img_obj = Image.open(active_file) if active_file else None
@@ -66,12 +59,23 @@ if prompt:
         if img_obj: st.image(img_obj, width=400)
 
     with st.chat_message("assistant"):
+        response = ""
         try:
             if img_obj:
-                # Şəkil analizi
-                response = vision_model.generate_content([SYSTEM_PROMPT, user_text, img_obj]).text
+                # MODEL ADLARINI SIRAYLA YOXLAYAN MÜHƏRRİK
+                for model_name in ['gemini-1.5-flash', 'models/gemini-1.5-flash', 'gemini-pro-vision']:
+                    try:
+                        temp_model = genai.GenerativeModel(model_name)
+                        res_obj = temp_model.generate_content([SYSTEM_PROMPT, user_text, img_obj])
+                        response = res_obj.text
+                        if response: break # Cavab gəldisə dayandır
+                    except Exception:
+                        continue # Xəta olsa növbəti modeli yoxla
+                
+                if not response:
+                    raise Exception("Bütün şəkil mühərrikləri məşğuldur.")
             else:
-                # Mətn üçün Groq (Llama 3.3)
+                # Mətn üçün Groq
                 chat_comp = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_text}]
@@ -82,12 +86,7 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": response})
 
         except Exception as e:
-            # Əgər yenə 404 olsa, istifadəçiyə bildirmədən Groq ilə cavab ver
-            st.warning("Şəkil mühərriki bərpa olunur, mətn əsaslı analiz aparılır...")
-            chat_comp = groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": user_text + " (Qeyd: Şəkli görə bilmirəm, mətni cavabla)"}]
-            )
-            st.markdown(chat_comp.choices[0].message.content)
+            st.warning("Mühərrik daxili optimallaşdırma aparır, təkrar cəhd edin.")
+            st.error(f"Xəta kodu: {str(e)}")
 
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
