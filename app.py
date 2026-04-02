@@ -10,6 +10,8 @@ GEMINI_KEY = "AIzaSyC3ze9DV5zdqFViVGs4vvxdvvkV5Eo-ptk"
 GROQ_KEY = "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"
 
 genai.configure(api_key=GEMINI_KEY)
+
+# XƏTANIN HƏLLİ: Modeli birbaşa 'gemini-1.5-flash' olaraq çağırırıq
 vision_model = genai.GenerativeModel('gemini-1.5-flash')
 groq_client = Groq(api_key=GROQ_KEY)
 
@@ -19,7 +21,7 @@ Dahi kimi cavab ver, nağıl danışma, birbaşa məqsədə fokuslan.
 """
 
 # ==========================================================
-# 2. ELITE INTERFACE (Menyu Geri Qaytarıldı)
+# 2. ELITE INTERFACE
 # ==========================================================
 st.set_page_config(page_title="ZƏKA ULTRA OMNI-X", layout="wide")
 
@@ -38,7 +40,6 @@ st.markdown("""
         color: #000; 
         margin-bottom: 5px;
     }
-    /* Footer gizli qalsın, amma Header (Menyu) görünsün */
     footer {visibility: hidden;}
     #MainMenu {visibility: visible;} 
     header {visibility: visible !important;}
@@ -50,10 +51,8 @@ st.markdown("<p style='text-align:center; color:gray; font-size:14px; margin-bot
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "current_img" not in st.session_state:
-    st.session_state.current_img = None
 
-# Chat History
+# Tarixçəni göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -69,25 +68,26 @@ if prompt:
     user_text = prompt.text if prompt.text else "Təhlil et."
     active_file = prompt.files[0] if (hasattr(prompt, 'files') and prompt.files) else None
     
-    img_to_save = None
+    img_obj = None
     if active_file:
-        img_to_save = Image.open(active_file)
-        st.session_state.current_img = img_to_save
+        img_obj = Image.open(active_file)
 
-    st.session_state.messages.append({"role": "user", "content": user_text, "image": img_to_save})
+    st.session_state.messages.append({"role": "user", "content": user_text, "image": img_obj})
     
     with st.chat_message("user"):
         st.markdown(user_text)
-        if img_to_save:
-            st.image(img_to_save, width=400)
+        if img_obj:
+            st.image(img_obj, width=400)
 
     with st.chat_message("assistant"):
         try:
-            # Şəkil varsa mütləq Gemini işləsin
-            if st.session_state.current_img:
-                response = vision_model.generate_content([SYSTEM_PROMPT, user_text, st.session_state.current_img]).text
+            # Əgər şəkil varsa GEMINI (Google) işləsin
+            if img_obj:
+                # 404 xətasını keçmək üçün ən sadə və düzgün çağırış metodu
+                response_content = vision_model.generate_content([SYSTEM_PROMPT, user_text, img_obj])
+                response = response_content.text
             else:
-                # Mətn üçün Groq
+                # Mətn üçünsə GROQ (Daha sürətli)
                 history = [{"role": "system", "content": SYSTEM_PROMPT}]
                 for m in st.session_state.messages[-5:]:
                     history.append({"role": m["role"], "content": m["content"]})
@@ -102,6 +102,8 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": response, "image": None})
 
         except Exception as e:
-            st.error("Sistem yenilənir. Xəta kodu: " + str(e))
+            # Xətanı daha aydın görmək üçün
+            st.error(f"Bağlantı xətası: {str(e)}")
+            st.info("İpucu: API açarını və ya model adını yoxlayın.")
 
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
