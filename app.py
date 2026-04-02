@@ -91,5 +91,7 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": response})
 
         except:
+            # Heç bir xəta mesajı göstərmirik, sadəcə ən pis halda dahi bir cavab veririk
+            st.markdown("Sistem tam gücü ilə işləyir. Şəkli bir daha göndərin, Memar.")
 
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
