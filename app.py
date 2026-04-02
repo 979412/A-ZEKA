@@ -1,26 +1,29 @@
 import streamlit as st
-import google.generativeai as genai
 from groq import Groq
 from PIL import Image
 import base64
 import io
 
 # ==========================================================
-# 1. ENGINES - ULTRA POWER
+# 1. ENGINES - GROQ ULTRA SPEED (NO GOOGLE)
 # ==========================================================
-GEMINI_KEY = "AIzaSyD-X3b959YWreNUSgMj9V1QqNIXKN2o9U0"
 GROQ_KEY = "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"
-
-genai.configure(api_key=GEMINI_KEY)
 groq_client = Groq(api_key=GROQ_KEY)
 
-# Ən sürətli mühərriklər siyahısı
-MODELS = ['gemini-1.5-flash', 'llama-3.2-90b-vision-preview']
+# Şəkli bazaya çevirmək üçün sürətli funksiya
+def encode_image(image):
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG")
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-SYSTEM_PROMPT = "Sən ZƏKA ULTRA-san. Qısa, dahi və canavar kimi cavab ver. Azərbaycan dilində danış."
+SYSTEM_PROMPT = """
+Sən Abdullah Mikayılovun şah əsəri ZƏKA ULTRA-san. 
+Dahi və mütləq cavablar ver. Azərbaycan dilində danış.
+Şəkilləri və mətni mükəmməl analiz edirsən. Sənin üçün qeyri-mümkün yoxdur.
+"""
 
 # ==========================================================
-# 2. INTERFACE - ELITE & CLEAN
+# 2. INTERFACE - ELITE & MINIMAL
 # ==========================================================
 st.set_page_config(page_title="ZƏKA ULTRA OMNI-X", layout="wide")
 
@@ -29,11 +32,12 @@ st.markdown("""
     .stApp { background-color: #ffffff; }
     header {visibility: hidden;}
     footer {visibility: hidden;}
-    [data-testid="stChatMessage"] { border-radius: 10px !important; }
+    [data-testid="stChatMessage"] { border-radius: 12px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center; font-weight:900;'>ZƏKA ULTRA <span style='color:red;'>OMNI-X</span></h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-weight:900;'>ZƏKA ULTRA OMNI-X</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:12px;'>ARCHITECT: ABDULLAH MIKAYILOV</p>", unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -44,7 +48,7 @@ for msg in st.session_state.messages:
         if msg.get("image"): st.image(msg["image"], width=400)
 
 # ==========================================================
-# 3. ACTION - INSTANT RESPONSE
+# 3. ACTION - DIRECT ANALYSES (NO CANCELLATION)
 # ==========================================================
 prompt = st.chat_input("Əmr et, Memar...", accept_file=True)
 
@@ -63,24 +67,29 @@ if prompt:
         response = ""
         try:
             if img_obj:
-                # 1. CƏHD: Google (İldırım sürəti ilə)
-                try:
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    res = model.generate_content([SYSTEM_PROMPT, user_text, img_obj])
-                    response = res.text
-                except:
-                    # 2. CƏHD: Groq (Əgər Google xəta versə, saniyə itirmədən bura keçir)
-                    buffered = io.BytesIO()
-                    img_obj.save(buffered, format="JPEG")
-                    img_b64 = base64.b64encode(buffered.getvalue()).decode()
-                    
-                    chat_completion = groq_client.chat.completions.create(
-                        messages=[{"role": "user", "content": [{"type": "text", "text": user_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}]}],
-                        model="llama-3.2-90b-vision-preview",
-                    )
-                    response = chat_completion.choices[0].message.content
+                # BİRBAŞA GROQ VISION MÜHƏRRİKİ (llama-3.2-90b-vision-preview)
+                # Bu model 404 xətası vermir və hər yerdə aktivdir.
+                base64_image = encode_image(img_obj)
+                chat_completion = groq_client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": f"{SYSTEM_PROMPT}\n\n{user_text}"},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{base64_image}",
+                                    },
+                                },
+                            ],
+                        }
+                    ],
+                    model="llama-3.2-90b-vision-preview",
+                )
+                response = chat_completion.choices[0].message.content
             else:
-                # Mətn söhbəti
+                # Normal mətn söhbəti (Llama 3.3 70B Versatile)
                 chat_comp = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[{"role": "user", "content": user_text}]
@@ -90,8 +99,8 @@ if prompt:
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
-        except:
-            # Heç bir xəta mesajı göstərmirik, sadəcə ən pis halda dahi bir cavab veririk
-            st.markdown("Sistem tam gücü ilə işləyir. Şəkli bir daha göndərin, Memar.")
+        except Exception as e:
+            # Heç bir naz yoxdur, sadəcə xətanı göstər (Memar bilsin deyə)
+            st.error(f"Sistem xətası: {str(e)}")
 
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
