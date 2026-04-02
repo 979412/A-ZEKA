@@ -5,7 +5,7 @@ import base64
 import io
 
 # ==========================================================
-# 1. CORE ENGINES - GROQ STABLE VISION
+# 1. CORE ENGINES - GROQ UNIVERSAL STABILITY
 # ==========================================================
 GROQ_KEY = "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"
 groq_client = Groq(api_key=GROQ_KEY)
@@ -17,12 +17,11 @@ def encode_image(image):
 
 SYSTEM_PROMPT = """
 Sən Abdullah Mikayılovun şah əsəri ZƏKA ULTRA-san. 
-Dahi və qətiyyətli cavablar ver. Azərbaycan dilində danış.
-Sən vizual və mətn məlumatlarını birləşdirən ən güclü AI sistemisən.
+Dahi və mütləq intellektlə cavab ver. Azərbaycan dilində danış.
 """
 
 # ==========================================================
-# 2. INTERFACE
+# 2. ELITE INTERFACE
 # ==========================================================
 st.set_page_config(page_title="ZƏKA ULTRA OMNI-X", layout="wide")
 
@@ -47,7 +46,7 @@ for msg in st.session_state.messages:
         if msg.get("image"): st.image(msg["image"], width=400)
 
 # ==========================================================
-# 3. ACTION - STABLE MODEL (INSTRUCT)
+# 3. ACTION - MULTI-MODEL STABILITY SYSTEM
 # ==========================================================
 prompt = st.chat_input("Əmr edin, Memar...", accept_file=True)
 
@@ -63,51 +62,49 @@ if prompt:
         if img_obj: st.image(img_obj, width=400)
 
     with st.chat_message("assistant"):
+        response = ""
         try:
-            with st.spinner("Zəka Ultra dərindən təhlil aparır..."):
-                if img_obj:
-                    # YENİ STABİL MODEL: llama-3.2-11b-vision-instruct
-                    base64_image = encode_image(img_obj)
-                    chat_completion = groq_client.chat.completions.create(
-                        messages=[
-                            {
+            if img_obj:
+                base64_image = encode_image(img_obj)
+                # MODEL ADLARINI SIRAYLA YOXLAYAN "SMART-BYPASS" SİSTEMİ
+                models_to_try = [
+                    "llama-3.2-11b-vision-preview",
+                    "llama-3.2-90b-vision-preview",
+                    "llama-3.2-11b-vision-instruct",
+                    "pixtral-12b-2409" # Ehtiyat variant
+                ]
+                
+                for model in models_to_try:
+                    try:
+                        chat_completion = groq_client.chat.completions.create(
+                            messages=[{
                                 "role": "user",
                                 "content": [
                                     {"type": "text", "text": f"{SYSTEM_PROMPT}\n\n{user_text}"},
-                                    {
-                                        "type": "image_url",
-                                        "image_url": {
-                                            "url": f"data:image/jpeg;base64,{base64_image}",
-                                        },
-                                    },
-                                ],
-                            }
-                        ],
-                        model="llama-3.2-11b-vision-instruct",
-                    )
-                    response = chat_completion.choices[0].message.content
-                else:
-                    # Mətn üçün Llama 3.3
-                    chat_comp = groq_client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_text}]
-                    )
-                    response = chat_comp.choices[0].message.content
+                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                                ]
+                            }],
+                            model=model,
+                        )
+                        response = chat_completion.choices[0].message.content
+                        if response: break
+                    except:
+                        continue
+                
+                if not response:
+                    raise Exception("Bütün vizual mühərriklər sınaqdan keçdi, lakin server cavab vermədi.")
+            else:
+                # Mətn söhbəti (Ən stabil model: Llama 3.3 70B)
+                chat_comp = groq_client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_text}]
+                )
+                response = chat_comp.choices[0].message.content
 
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 
         except Exception as e:
-            # Əgər 11b naz eləsə, avtomatik 90b versiyasına keçid
-            try:
-                base64_image = encode_image(img_obj)
-                chat_completion = groq_client.chat.completions.create(
-                    messages=[{"role": "user", "content": [{"type": "text", "text": user_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
-                    model="llama-3.2-90b-vision-instruct",
-                )
-                response = chat_completion.choices[0].message.content
-                st.markdown(response)
-            except:
-                st.error(f"Sistem yenilənir. Xəta: {str(e)}")
+            st.error(f"Sistem bərpa olunur. Detal: {str(e)}")
 
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
