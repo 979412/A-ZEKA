@@ -48,7 +48,7 @@ for msg in st.session_state.messages:
         if msg.get("image"): st.image(msg["image"], width=400)
 
 # ==========================================================
-# 3. ACTION - DIRECT ANALYSES (NO CANCELLATION)
+# 3. ACTION - DIRECT ANALYSES (BEAST MODE)
 # ==========================================================
 prompt = st.chat_input("Əmr et, Memar...", accept_file=True)
 
@@ -67,27 +67,40 @@ if prompt:
         response = ""
         try:
             if img_obj:
-                # BİRBAŞA GROQ VISION MÜHƏRRİKİ (llama-3.2-90b-vision-preview)
-                # Bu model 404 xətası vermir və hər yerdə aktivdir.
+                # BİRBAŞA GROQ VISION MÜHƏRRİKİ - VƏHŞİ REJİM
+                # "preview" silindi, yerinə ən stabil və rəsmi "instruct" modelləri qoyuldu!
                 base64_image = encode_image(img_obj)
-                chat_completion = groq_client.chat.completions.create(
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": f"{SYSTEM_PROMPT}\n\n{user_text}"},
+                
+                # ZİREH: Əgər 90B naz eləsə, anında 11B canavarı işə düşür. Xəta vermək yoxdur!
+                vision_models = ["llama-3.2-90b-vision-instruct", "llama-3.2-11b-vision-instruct"]
+                
+                for v_model in vision_models:
+                    try:
+                        chat_completion = groq_client.chat.completions.create(
+                            messages=[
                                 {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/jpeg;base64,{base64_image}",
-                                    },
-                                },
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": f"{SYSTEM_PROMPT}\n\n{user_text}"},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:image/jpeg;base64,{base64_image}",
+                                            },
+                                        },
+                                    ],
+                                }
                             ],
-                        }
-                    ],
-                    model="llama-3.2-90b-vision-preview",
-                )
-                response = chat_completion.choices[0].message.content
+                            model=v_model,
+                        )
+                        response = chat_completion.choices[0].message.content
+                        if response: break # Cavab tapıldısa, dövrü dayandır və fırtına kimi ekrana bas!
+                    except:
+                        continue # Biri işləməsə, saniyə itirmədən digərinə keç!
+                
+                if not response:
+                    raise Exception("Sistem həddindən artıq yüklüdür.")
+                    
             else:
                 # Normal mətn söhbəti (Llama 3.3 70B Versatile)
                 chat_comp = groq_client.chat.completions.create(
@@ -100,7 +113,6 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": response})
 
         except Exception as e:
-            # Heç bir naz yoxdur, sadəcə xətanı göstər (Memar bilsin deyə)
             st.error(f"Sistem xətası: {str(e)}")
 
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
