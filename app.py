@@ -7,91 +7,109 @@ from groq import Groq
 from PIL import Image
 
 # ==========================================================
-# 1. CORE ENGINES - THE SUPREME CORE
+# 1. ENGINES & CONFIG
 # ==========================================================
 GEMINI_KEY = "AIzaSyD-X3b959YWreNUSgMj9V1QqNIXKN2o9U0"
 GROQ_KEY = "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"
-
 groq_client = Groq(api_key=GROQ_KEY)
 
-def encode_image(image):
-    buffered = io.BytesIO()
-    image = image.convert("RGB")
-    # Şəkli çox kiçik ölçüyə salırıq ki, analiz ildırım kimi olsun
-    image.thumbnail((512, 512)) 
-    image.save(buffered, format="JPEG", quality=60)
-    return base64.b64encode(buffered.getvalue()).decode('utf-8')
-
-SYSTEM_PROMPT = "Sən ZƏKA ULTRA-san. Abdullah Mikayılovun qurduğu ən güclü AI-san. Analiz et və dahi kimi cavab ver."
-
-# ==========================================================
-# 2. INTERFACE - ELITE BLACK & WHITE
-# ==========================================================
 st.set_page_config(page_title="ZƏKA ULTRA OMNI-X", layout="wide")
 
+# Şəkli analiz üçün hazırlayan funksiya
+def process_image(img_file):
+    image = Image.open(img_file).convert("RGB")
+    image.thumbnail((800, 800)) # Sürət üçün ölçü
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG", quality=80)
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+# ==========================================================
+# 2. ULTRA DESIGN (CSS)
+# ==========================================================
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
+    [data-testid="stChatMessage"] { border-radius: 15px !important; border: 1px solid #f0f0f0; margin-bottom: 10px; }
+    .stChatInput { position: fixed; bottom: 20px; }
     header, footer {visibility: hidden;}
-    [data-testid="stChatMessage"] { border-radius: 10px !important; border: 1px solid #eeeeee; }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center; font-weight:900;'>ZƏKA ULTRA OMNI-X</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-weight:900;'>ZƏKA ULTRA <span style='color:red;'>OMNI-X</span></h1>", unsafe_allow_html=True)
 
+# ==========================================================
+# 3. MEMORY & LOGIC
+# ==========================================================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Köhnə mesajları göstər
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
-        if msg.get("image"): st.image(msg["image"], width=300)
+        if "image" in msg: st.image(msg["image"], width=300)
 
-# ==========================================================
-# 3. ACTION - THE UNSTOPPABLE ANALYZER
-# ==========================================================
+# ƏMR GİRİŞİ (Şəkil qəbulu ilə birlikdə)
 prompt = st.chat_input("Əmr et, Memar...", accept_file=True)
 
 if prompt:
-    user_text = prompt.text if prompt.text else "Təhlil et."
-    active_file = prompt.files[0] if (hasattr(prompt, 'files') and prompt.files) else None
-    
-    img_obj = Image.open(active_file) if active_file else None
-    st.session_state.messages.append({"role": "user", "content": user_text, "image": img_obj})
+    user_text = prompt.text if prompt.text else "Bu şəkli analiz et!"
+    st.session_state.messages.append({"role": "user", "content": user_text})
     
     with st.chat_message("user"):
         st.markdown(user_text)
-        if img_obj: st.image(img_obj, width=300)
+        
+        # Əgər şəkil varsa, onu dərhal yaddaşa və ekrana ver
+        active_img = None
+        if prompt.files:
+            active_img = Image.open(prompt.files[0])
+            st.image(active_img, width=300)
+            st.session_state.messages[-1]["image"] = active_img
 
+    # ANALİZ PROSESİ
     with st.chat_message("assistant"):
-        response = ""
-        # 1. CƏHD: GOOGLE GEMINI (BİRBAŞA NÜVƏ)
-        if img_obj:
-            b64_img = encode_image(img_obj)
+        with st.spinner("ZƏKA ULTRA DÜŞÜNÜR..."):
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
-                payload = {"contents": [{"parts": [{"text": user_text}, {"inline_data": {"mime_type": "image/jpeg", "data": b64_img}}]}]}
-                res = requests.post(url, headers={"Content-Type": "application/json"}, data=json.dumps(payload), timeout=15)
-                response = res.json()['candidates'][0]['content']['parts'][0]['text']
-            except:
-                # 2. CƏHD: GROQ (ƏGƏR GOOGLE ÖLSƏ)
-                try:
+                if active_img:
+                    b64_data = process_image(prompt.files[0])
+                    
+                    # 1. STRATEGIYA: BİRBAŞA GOOGLE API HÜCUMU
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
+                    payload = {
+                        "contents": [{
+                            "parts": [
+                                {"text": f"Sən ZƏKA ULTRA-san. Analiz et: {user_text}"},
+                                {"inline_data": {"mime_type": "image/jpeg", "data": b64_data}}
+                            ]
+                        }]
+                    }
+                    res = requests.post(url, json=payload, timeout=20)
+                    
+                    if res.status_code == 200:
+                        ans = res.json()['candidates'][0]['content']['parts'][0]['text']
+                    else:
+                        # 2. STRATEGIYA: GROQ FALLBACK (Ehtiyat mühərrik)
+                        chat_comp = groq_client.chat.completions.create(
+                            model="llama-3.2-11b-vision-preview",
+                            messages=[{"role": "user", "content": [
+                                {"type": "text", "text": user_text},
+                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_data}"}}
+                            ]}]
+                        )
+                        ans = chat_comp.choices[0].message.content
+                else:
+                    # SADƏ MƏTN SÖHBƏTİ
                     chat_comp = groq_client.chat.completions.create(
-                        model="llama-3.2-11b-vision-preview",
-                        messages=[{"role": "user", "content": [{"type": "text", "text": user_text}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"}}]}],
+                        model="llama-3.3-70b-versatile",
+                        messages=[{"role": "user", "content": user_text}]
                     )
-                    response = chat_comp.choices[0].message.content
-                except:
-                    response = "Analiz uğursuz oldu, amma ZƏKA ULTRA yenidən yoxlayır. Lütfən şəkli bir daha atın."
-        else:
-            # SADƏ MƏTN
-            chat_comp = groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": user_text}]
-            )
-            response = chat_comp.choices[0].message.content
+                    ans = chat_comp.choices[0].message.content
 
-        st.markdown(response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+                st.markdown(ans)
+                st.session_state.messages.append({"role": "assistant", "content": ans})
+
+            except Exception as e:
+                # Heç bir "yenidən daxil edin" yoxdur, birbaşa vəhşi cavab!
+                st.markdown("Memar, sistemdə anlıq dalğalanma oldu, amma mən hazıram. Əmrinizi gözləyirəm!")
 
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
