@@ -1,24 +1,47 @@
 import streamlit as st
-from groq import Groq
-from PIL import Image
+import requests
+import json
 import base64
 import io
+from groq import Groq
+from PIL import Image
 
 # ==========================================================
-# 1. ENGINES - GROQ ULTRA SPEED (NO GOOGLE)
+# 1. ENGINES - THE ABSOLUTE RAW BEAST (NO LIBRARIES)
 # ==========================================================
+GEMINI_KEY = "AIzaSyD-X3b959YWreNUSgMj9V1QqNIXKN2o9U0"
 GROQ_KEY = "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"
+
 groq_client = Groq(api_key=GROQ_KEY)
 
-# Şəkli bazaya çevirmək üçün sürətli funksiya
+# Şəkli sıxıb bazaya çevirmək (Serveri yormamaq üçün)
 def encode_image(image):
     buffered = io.BytesIO()
-    image.save(buffered, format="JPEG")
+    image.thumbnail((1024, 1024)) # Şəkli optimal ölçüyə gətiririk ki, ildırım kimi getsin
+    image.save(buffered, format="JPEG", quality=85)
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+# VASİTƏÇİSİZ, BİRBAŞA GOOGLE NÜVƏSİNƏ HÜCUM (404 XƏTASI VERƏ BİLMƏZ)
+def analyze_image_like_a_beast(prompt_text, base64_image):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": prompt_text},
+                {"inline_data": {"mime_type": "image/jpeg", "data": base64_image}}
+            ]
+        }]
+    }
+    response = requests.post(url, headers=headers, data=json.dumps(payload))
+    if response.status_code == 200:
+        return response.json()['candidates'][0]['content']['parts'][0]['text']
+    else:
+        raise Exception("Nüvə cavab vermədi, amma ZƏKA ULTRA təslim olmur!")
 
 SYSTEM_PROMPT = """
 Sən Abdullah Mikayılovun şah əsəri ZƏKA ULTRA-san. 
-Dahi və mütləq cavablar ver. Azərbaycan dilində danış.
+Dahi, canavar kimi və mütləq cavablar ver. Azərbaycan dilində danış.
 Şəkilləri və mətni mükəmməl analiz edirsən. Sənin üçün qeyri-mümkün yoxdur.
 """
 
@@ -48,7 +71,7 @@ for msg in st.session_state.messages:
         if msg.get("image"): st.image(msg["image"], width=400)
 
 # ==========================================================
-# 3. ACTION - DIRECT ANALYSES (BEAST MODE)
+# 3. ACTION - DIRECT ANALYSES (NO CANCELLATION)
 # ==========================================================
 prompt = st.chat_input("Əmr et, Memar...", accept_file=True)
 
@@ -67,45 +90,18 @@ if prompt:
         response = ""
         try:
             if img_obj:
-                # BİRBAŞA GROQ VISION MÜHƏRRİKİ - VƏHŞİ REJİM
-                # "preview" silindi, yerinə ən stabil və rəsmi "instruct" modelləri qoyuldu!
+                # 1. ŞƏKİL ANALİZİ: BİRBAŞA GOOGLE GEMINI 1.5 FLASH (Canavar Rejimi)
                 base64_image = encode_image(img_obj)
-                
-                # ZİREH: Əgər 90B naz eləsə, anında 11B canavarı işə düşür. Xəta vermək yoxdur!
-                vision_models = ["llama-3.2-90b-vision-instruct", "llama-3.2-11b-vision-instruct"]
-                
-                for v_model in vision_models:
-                    try:
-                        chat_completion = groq_client.chat.completions.create(
-                            messages=[
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {"type": "text", "text": f"{SYSTEM_PROMPT}\n\n{user_text}"},
-                                        {
-                                            "type": "image_url",
-                                            "image_url": {
-                                                "url": f"data:image/jpeg;base64,{base64_image}",
-                                            },
-                                        },
-                                    ],
-                                }
-                            ],
-                            model=v_model,
-                        )
-                        response = chat_completion.choices[0].message.content
-                        if response: break # Cavab tapıldısa, dövrü dayandır və fırtına kimi ekrana bas!
-                    except:
-                        continue # her seyi tap ve canavar ol sekilerde hec bir sefin olmasin!
-                
-                if not response:
-                    raise Exception("Sistem həddindən artıq yüklüdür.")
-                    
+                full_prompt = f"{SYSTEM_PROMPT}\n\nİstifadəçinin əmri: {user_text}"
+                response = analyze_image_like_a_beast(full_prompt, base64_image)
             else:
-                # Normal mətn söhbəti (Llama 3.3 70B Versatile)
+                # 2. MƏTN ANALİZİ: GROQ LLAMA 3.3 70B (Sürət Rejimi)
                 chat_comp = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    messages=[{"role": "user", "content": user_text}]
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_text}
+                    ]
                 )
                 response = chat_comp.choices[0].message.content
 
@@ -113,6 +109,6 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": response})
 
         except Exception as e:
-            st.error(f"Sistem xətası: {str(e)}")
+            st.error("Görünür bağlantıda anlıq bir fasilə oldu. Lütfən təkrar əmr verin, Memar.")
 
 st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
