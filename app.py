@@ -96,7 +96,7 @@ if prompt:
                         response = chat_completion.choices[0].message.content
                         if response: break # Cavab tapıldısa, dövrü dayandır və fırtına kimi ekrana bas!
                     except:
-                        continue # Biri işləməsə, saniyə itirmədən digərinə keç!
+                        continue # her seyi tap ve canavar ol sekilerde hec bir sefin olmasin!
                 
                 if not response:
                     raise Exception("Sistem həddindən artıq yüklüdür.")
