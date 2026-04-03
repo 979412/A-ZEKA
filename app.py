@@ -5,7 +5,7 @@ import base64
 import io
 
 # ==========================================================
-# 1. CORE ENGINE
+# 1. ENGINES - GROQ ULTRA SPEED (NO GOOGLE)
 # ==========================================================
 GROQ_KEY = "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"
 groq_client = Groq(api_key=GROQ_KEY)
@@ -15,67 +15,101 @@ def encode_image(image):
     image.save(buffered, format="JPEG")
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-# ==========================================================
-# 2. INTERFACE (MODERN & STABLE)
-# ==========================================================
-st.set_page_config(page_title="ZƏKA ULTRA", layout="centered")
+SYSTEM_PROMPT = """
+Sən Abdullah Mikayılovun şah əsəri ZƏKA ULTRA-san. 
+Dahi və mütləq cavablar ver. Azərbaycan dilində danış.
+Şəkilləri və mətni mükəmməl analiz edirsən. Sənin üçün qeyri-mümkün yoxdur.
+"""
 
-st.markdown("<h1 style='text-align:center;'>ZƏKA ULTRA OMNI-X</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray;'>ARCHITECT: ABDULLAH MIKAYILOV</p>", unsafe_allow_html=True)
+# ==========================================================
+# 2. INTERFACE - ELITE & MINIMAL
+# ==========================================================
+st.set_page_config(page_title="ZƏKA ULTRA OMNI-X", layout="wide")
 
-# Şəkil yükləmə paneli (Həmişə görünən hissə)
-uploaded_file = st.file_uploader("Şəkil yükləyin və ya bura sürükləyin", type=["jpg", "jpeg", "png"])
+# CSS əlavəsi: Giriş sahəsinin həmişə görünməsi üçün
+st.markdown("""
+    <style>
+    .stApp { background-color: #ffffff; }
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    [data-testid="stChatMessage"] { border-radius: 12px !important; }
+    /* Chat inputun yerini bərkitmək üçün */
+    .stChatInput {
+        position: fixed;
+        bottom: 30px;
+        z-index: 1000;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("<h1 style='text-align:center; font-weight:900;'>ZƏKA ULTRA OMNI-X</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:12px;'>ARCHITECT: ABDULLAH MIKAYILOV</p>", unsafe_allow_html=True)
+
+# Mesaj konteyneri (Yuxarıda mesajlar, aşağıda giriş sahəsi)
+chat_container = st.container()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Mesaj tarixçəsi
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# Mətn girişi
-user_input = st.chat_input("Sualınızı bura yazın...")
+with chat_container:
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+            if msg.get("image"): st.image(msg["image"], width=400)
 
 # ==========================================================
-# 3. ACTION LOGIC
+# 3. ACTION - DIRECT ANALYSES
 # ==========================================================
-if user_input:
-    # İstifadəçi mesajını göstər
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.markdown(user_input)
+# accept_file=True hissəsi bəzi brauzerlərdə düyməni gizlədir, 
+# ona görə bunu ən stabil halda saxlayırıq
+prompt = st.chat_input("Əmr et, Memar...", accept_file=True)
 
-    with st.chat_message("assistant"):
-        try:
-            if uploaded_file:
-                # ŞƏKİL ANALİZİ (GROQ VISION)
-                img = Image.open(uploaded_file)
-                base64_image = encode_image(img)
-                
-                completion = groq_client.chat.completions.create(
-                    model="llama-3.2-11b-vision-preview",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": user_input},
-                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                            ]
-                        }
-                    ]
-                )
-                response = completion.choices[0].message.content
-            else:
-                # SADƏ MƏTN ANALİZİ
-                chat_completion = groq_client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=[{"role": "user", "content": user_input}]
-                )
-                response = chat_completion.choices[0].message.content
+if prompt:
+    user_text = prompt.text if prompt.text else "Təhlil et!"
+    active_file = prompt.files[0] if (hasattr(prompt, 'files') and prompt.files) else None
+    
+    img_obj = Image.open(active_file) if active_file else None
+    st.session_state.messages.append({"role": "user", "content": user_text, "image": img_obj})
+    
+    with chat_container:
+        with st.chat_message("user"):
+            st.markdown(user_text)
+            if img_obj: st.image(img_obj, width=400)
 
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"):
+            try:
+                if img_obj:
+                    base64_image = encode_image(img_obj)
+                    chat_completion = groq_client.chat.completions.create(
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": f"{SYSTEM_PROMPT}\n\n{user_text}"},
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": f"data:image/jpeg;base64,{base64_image}",
+                                        },
+                                    },
+                                ],
+                            }
+                        ],
+                        model="llama-3.2-90b-vision-preview",
+                    )
+                    response = chat_completion.choices[0].message.content
+                else:
+                    chat_comp = groq_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[{"role": "user", "content": user_text}]
+                    )
+                    response = chat_comp.choices[0].message.content
 
-        except Exception as e:
-            st.error("Mühərrikdə kiçik bir ləngimə oldu. Yenidən cəhd edin.")
+                st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+
+            except Exception as e:
+                st.error(f"Sistem xətası: {str(e)}")
+
+# Avtomatik aşağı sürüşdürmə
+st.markdown('<script>window.scrollTo(0, document.body.scrollHeight);</script>', unsafe_allow_html=True)
