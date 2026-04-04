@@ -1,34 +1,38 @@
 import streamlit as st
 import google.generativeai as genai
 
-# Səhifənin dizaynı
+# Səhifənin başlığı
 st.set_page_config(page_title="EduGenius AI", page_icon="🎓")
 st.title("🎓 EduGenius AI")
-st.subheader("Məktəblilər və Müəllimlər üçün Süni İntellekt")
+st.write("Məktəblilər və Müəllimlər üçün Süni İntellekt Sistemi")
 
-# Yan menyuda API Key girişi (Təhlükəsizlik üçün)
+# API Key daxil etmək üçün yer
 with st.sidebar:
-    api_key = st.text_input("Google API Key daxil edin:", type="password")
-    role = st.selectbox("Kimsiniz?", ["Şagird", "Müəllim"])
+    st.title("Ayarlar")
+    api_key = st.text_input("Google API Key-i bura yazın:", type="password")
+    role = st.radio("Siz kimsiniz?", ["Şagird", "Müəllim"])
 
 if api_key:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
-    user_input = st.text_area("Sualınızı və ya mövzunu yazın:")
+        user_input = st.text_input("Sualınızı bura yazın:")
 
-    if st.button("Cavablandır"):
-        if user_input:
-            with st.spinner('Düşünürəm...'):
-                if role == "Müəllim":
-                    prompt = f"Sən peşəkar müəllimsən. Bu mövzu üçün dərs planı və 5 suallıq test yarat: {user_input}"
-                else:
-                    prompt = f"Sən mehriban bir repetitorsan. Bu mövzunu 12 yaşlı uşağa izah edən kimi sadə izah et: {user_input}"
-                
-                response = model.generate_content(prompt)
-                st.markdown("### 🤖 EduGenius-un Cavabı:")
-                st.write(response.text)
-        else:
-            st.warning("Zəhmət olmasa bir mövzu daxil edin.")
+        if st.button("Cavab Al"):
+            if user_input:
+                with st.spinner('Düşünürəm...'):
+                    if role == "Müəllim":
+                        prompt = f"Sən peşəkar müəllimsən. Bu mövzu üçün dərs planı və 5 test sualı yarat: {user_input}"
+                    else:
+                        prompt = f"Sən şagird dostusan. Bu mövzunu uşağa izah edən kimi çox sadə izah et: {user_input}"
+                    
+                    response = model.generate_content(prompt)
+                    st.success("Budur:")
+                    st.write(response.text)
+            else:
+                st.warning("Zəhmət olmasa sual yazın.")
+    except Exception as e:
+        st.error(f"Xəta baş verdi: {e}")
 else:
-    st.info("Başlamaq üçün sol tərəfə API açarınızı daxil edin.")
+    st.info("Sol tərəfdəki panelə API Key daxil edin ki, intellekt işə düşsün.")
