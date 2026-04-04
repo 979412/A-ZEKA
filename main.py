@@ -21,17 +21,16 @@ QƏTİ QAYDALARIN:
 # API Qoşulması və "Pro" modelin seçilməsi
 try:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    # BURADA "flash" YERİNƏ "pro" SEÇDİK Kİ, DAHA AĞILLI OLSUN!
     model = genai.GenerativeModel(
         model_name='gemini-1.5-pro',
         system_instruction=SYSTEM_INSTRUCTION
     )
 except Exception as e:
-    st.error("Sistem xətası! Abdullah, gizli açarları (Secrets) yoxla.")
+    st.error("⚠️ API Xətası: Streamlit panelində 'Secrets' bölməsində GOOGLE_API_KEY yoxdur və ya səhv yazılıb.")
 
-# Dizayn
-st.markdown("<h1 style='text-align: center; color: #ff3333;'>🐺 A-ZEKA-ULTRA (Beast Mode) 🐺</h1>", unsafe_allow_all=True)
-st.markdown("<h4 style='text-align: center; color: gray;'>Abdullah Mikayılov tərəfindən yaradılmış məğlubedilməz zəka.</h4>", unsafe_allow_all=True)
+# Dizayn (Bura düzəldildi!)
+st.markdown("<h1 style='text-align: center; color: #ff3333;'>🐺 A-ZEKA-ULTRA (Beast Mode) 🐺</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align: center; color: gray;'>Abdullah Mikayılov tərəfindən yaradılmış məğlubedilməz zəka.</h4>", unsafe_allow_html=True)
 st.markdown("---")
 
 # Sual daxil etmək üçün
@@ -45,6 +44,6 @@ if st.button("Hücum Et 🚀"):
                 st.markdown("### ⚡ Canavarın Cavabı:")
                 st.info(response.text)
             except Exception as e:
-                st.error("Nəsə problem oldu. Google API limiti dolmuş ola bilər.")
+                st.error("Nəsə problem oldu. Zəhmət olmasa Google API kodunu bir daha yoxla.")
     else:
         st.warning("Boş-boşuna düyməyə basma, sual ver!")
