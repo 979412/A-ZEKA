@@ -36,3 +36,23 @@ if api_key:
         st.error(f"Xəta baş verdi: {e}")
 else:
     st.info("Sol tərəfdəki panelə API Key daxil edin ki, intellekt işə düşsün.")
+    import streamlit as st
+import google.generativeai as genai
+
+st.set_page_config(page_title="EduGenius AI", page_icon="🎓")
+st.title("🎓 EduGenius AI")
+
+with st.sidebar:
+    st.title("Ayarlar")
+    api_key = st.text_input("Google API Key daxil edin:", type="password")
+    role = st.radio("Siz kimsiz?", ["Şagird", "Müəllim"])
+
+if api_key:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    user_input = st.text_input("Sualınızı yazın:")
+    if st.button("Cavablandır"):
+        response = model.generate_content(f"{role} üçün izah et: {user_input}")
+        st.write(response.text)
+else:
+    st.info("Zəhmət olmasa sol tərəfə API Key daxil edin.")
