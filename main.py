@@ -1,21 +1,34 @@
+import streamlit as st
 import google.generativeai as genai
-import os
 
-# 1. AI-ni sazlayırıq
-# QEYD: API açarını bura birbaşa yazmaq təhlükəlidir, amma test üçün hələlik belə edək.
-API_KEY = "BURA_API_KEY_YAZILACAQ" 
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Səhifənin dizaynı
+st.set_page_config(page_title="EduGenius AI", page_icon="🎓")
+st.title("🎓 EduGenius AI")
+st.subheader("Məktəblilər və Müəllimlər üçün Süni İntellekt")
 
-def edu_genius_beyin(sorğu, rol="şagird"):
-    if rol == "müəllim":
-        sistem_mesaji = f"Sən peşəkar bir müəllimsən. Bu mövzuda dərs planı və test hazırla: {sorğu}"
-    else:
-        sistem_mesaji = f"Sən şagirdlərin ən yaxşı dostusan. Bu mövzunu uşaqlara çox sadə dildə izah et: {sorğu}"
-    
-    response = model.generate_content(sistem_mesaji)
-    return response.text
+# Yan menyuda API Key girişi (Təhlükəsizlik üçün)
+with st.sidebar:
+    api_key = st.text_input("Google API Key daxil edin:", type="password")
+    role = st.selectbox("Kimsiniz?", ["Şagird", "Müəllim"])
 
-# Test edirik:
-print("--- EduGenius İşə Düşdü ---")
-print(edu_genius_beyin("Fotosintez nədir?", rol="şagird"))
+if api_key:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+
+    user_input = st.text_area("Sualınızı və ya mövzunu yazın:")
+
+    if st.button("Cavablandır"):
+        if user_input:
+            with st.spinner('Düşünürəm...'):
+                if role == "Müəllim":
+                    prompt = f"Sən peşəkar müəllimsən. Bu mövzu üçün dərs planı və 5 suallıq test yarat: {user_input}"
+                else:
+                    prompt = f"Sən mehriban bir repetitorsan. Bu mövzunu 12 yaşlı uşağa izah edən kimi sadə izah et: {user_input}"
+                
+                response = model.generate_content(prompt)
+                st.markdown("### 🤖 EduGenius-un Cavabı:")
+                st.write(response.text)
+        else:
+            st.warning("Zəhmət olmasa bir mövzu daxil edin.")
+else:
+    st.info("Başlamaq üçün sol tərəfə API açarınızı daxil edin.")
