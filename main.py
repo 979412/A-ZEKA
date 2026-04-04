@@ -1,58 +1,44 @@
 import streamlit as st
 import google.generativeai as genai
 
-# Səhifənin başlığı
+# Səhifənin tənzimləmələri (Cəmi 1 dəfə yazılmalıdır)
 st.set_page_config(page_title="EduGenius AI", page_icon="🎓")
-st.title("🎓 EduGenius AI")
-st.write("Məktəblilər və Müəllimlər üçün Süni İntellekt Sistemi")
 
-# API Key daxil etmək üçün yer
+# Sol tərəfdəki Ayarlar bölməsi
 with st.sidebar:
-    st.title("Ayarlar")
-    api_key = st.text_input("Google API Key-i bura yazın:", type="password")
+    st.title("⚙️ Ayarlar")
+    api_key = st.text_input("Google API Key daxil edin:", type="password")
     role = st.radio("Siz kimsiniz?", ["Şagird", "Müəllim"])
+    st.markdown("---")
+    st.write("Yaradıcı: **Abdullah Mikayılov**")
+
+# Əsas ekran
+st.title("🎓 EduGenius AI")
+st.write("### Məktəblilər və Müəllimlər üçün Süni İntellekt Sistemi")
 
 if api_key:
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
 
-        user_input = st.text_input("Sualınızı bura yazın:")
+        user_input = st.text_input("Sualınızı və ya mövzunu bura yazın:")
 
-        if st.button("Cavab Al"):
+        if st.button("Cavablandır 🚀"):
             if user_input:
-                with st.spinner('Düşünürəm...'):
+                with st.spinner('EduGenius düşünür...'):
+                    # Rol seçiminə görə xüsusi təlimat (Prompt)
                     if role == "Müəllim":
-                        prompt = f"Sən peşəkar müəllimsən. Bu mövzu üçün dərs planı və 5 test sualı yarat: {user_input}"
+                        prompt = f"Sən peşəkar bir müəllimsən. Bu mövzu üçün ətraflı dərs planı və 5 ədəd maraqlı test sualı hazırla: {user_input}"
                     else:
-                        prompt = f"Sən şagird dostusan. Bu mövzunu uşağa izah edən kimi çox sadə izah et: {user_input}"
+                        prompt = f"Sən mehriban bir şagird dostusan. Bu mövzunu bir məktəbliyə çox sadə, maraqlı və aydın misallarla izah et: {user_input}"
                     
                     response = model.generate_content(prompt)
-                    st.success("Budur:")
+                    st.success(f"Budur, {role} üçün hazırladığım cavab:")
+                    st.markdown("---")
                     st.write(response.text)
             else:
-                st.warning("Zəhmət olmasa sual yazın.")
+                st.warning("Zəhmət olmasa bir sual yazın.")
     except Exception as e:
-        st.error(f"Xəta baş verdi: {e}")
+        st.error(f"Xəta baş verdi: API açarı səhv ola bilər. Detal: {e}")
 else:
-    st.info("Sol tərəfdəki panelə API Key daxil edin ki, intellekt işə düşsün.")
-    import streamlit as st
-import google.generativeai as genai
-
-st.set_page_config(page_title="EduGenius AI", page_icon="🎓")
-st.title("🎓 EduGenius AI")
-
-with st.sidebar:
-    st.title("Ayarlar")
-    api_key = st.text_input("Google API Key daxil edin:", type="password")
-    role = st.radio("Siz kimsiz?", ["Şagird", "Müəllim"])
-
-if api_key:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    user_input = st.text_input("Sualınızı yazın:")
-    if st.button("Cavablandır"):
-        response = model.generate_content(f"{role} üçün izah et: {user_input}")
-        st.write(response.text)
-else:
-    st.info("Zəhmət olmasa sol tərəfə API Key daxil edin.")
+    st.info("💡 Başlamaq üçün sol tərəfdəki panelə Google Gemini API Key-inizi daxil edin.")
