@@ -1,107 +1,87 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import PyPDF2
-import io
+try:
+    import PyPDF2
+except ImportError:
+    st.error("Zəhmət olmasa requirements.txt faylına 'PyPDF2' əlavə edin.")
 
-# 1. Səhifə Konfiqurasiyası (Yüksək Səviyyəli Brending)
-st.set_page_config(page_title="A-ZEKA-ULTRA Premium", page_icon="💎", layout="wide")
+# 1. Premium Brending
+st.set_page_config(page_title="A-ZEKA-ULTRA | Enterprise AI", page_icon="💎", layout="wide")
 
-# 2. API Təhlükəsizliyi
+# 2. API Konfiqurasiyası
 MY_API_KEY = "AIzaSyAXXGnAAqDQYASfwlEHUgBjG_mAe8GqK6A"
 
-# 3. CANAVARIN BEYNİ (Sistem Təlimatı - Məntiq 100%)
+# 3. CANAVARIN ALİ MƏNTİQİ (100,000$ Değerində Təlimat)
 SYSTEM_INSTRUCTION = """
-Sən A-ZEKA-ULTRA-san. Dünyanın ən bahalı və zəki biznes analitika sistemisən. 
-Məqsədin: Abdullah Mikayılovun müştərilərinə (böyük iş sahiblərinə) 100% dəqiq məntiq və analiz təqdim etməkdir.
+Sən A-ZEKA-ULTRA-san. Abdullah Mikayılov tərəfindən yaradılmış, dünyanın ən bahalı və dərin zəkalı analitik sistemisən. 
+Sənin məntiqin 100% qüsursuzdur. 
 
-ANALİZ QAYDALARI:
-- Sənə verilən PDF, sənəd və ya şəkilləri bir alim titizliyi ilə oxu.
-- Cavabların mütləq faktlara əsaslanmalıdır. Ehtimal və uydurma (halüsinasiya) QADAĞANDIR.
-- Əgər sənəddə cavab yoxdursa, "Bu məlumat mövcud sənəddə tapılmadı" de.
-- İş sahibləri üçün qısa, konkret və strateji tövsiyələr ver.
-- Sən rəqəmsal bir dahisən, tonun professional və sarsılmazdır.
+Sənin Missiyan:
+1. Sənə verilən hər bir sənədi, mətni və şəkli atomlarına qədər parçala və analiz et.
+2. Alimlərin hələ cavab tapmadığı (məsələn: Kvant cazibəsi, qara maddənin mahiyyəti, şüurun mənşəyi) suallar verildikdə, mövcud elmi nəzəriyyələri sintez edərək heç kimin ağlına gəlməyən hipotezlər irəli sür.
+3. Biznes sahibləri üçün sənədlərdəki gizli riskləri və fürsətləri tap.
+4. Heç vaxt "bilmirəm" demə, həmişə "Mövcud data əsasında ən yüksək ehtimallı analiz budur..." deyərək dərin məntiqi cavab ver.
 """
 
-# 4. API və Model Qurulumu
+# API və Model
 try:
     genai.configure(api_key=MY_API_KEY)
-    model = genai.GenerativeModel(
-        model_name='gemini-1.5-pro', # Ən güclü analitik model
-        system_instruction=SYSTEM_INSTRUCTION
-    )
-except Exception as e:
-    st.error("Bağlantı xətası. Lütfən interneti yoxlayın.")
+    model = genai.GenerativeModel(model_name='gemini-1.5-pro', system_instruction=SYSTEM_INSTRUCTION)
+except:
+    st.error("Sistem bağlantısında fasilə yarandı.")
 
-# 5. PDF Oxuma Funksiyası (Böyük Analiz üçün)
-def extract_pdf_text(uploaded_file):
-    pdf_reader = PyPDF2.PdfReader(uploaded_file)
-    text = ""
+# PDF Oxuyucu
+def get_pdf_content(file):
+    pdf_reader = PyPDF2.PdfReader(file)
+    content = ""
     for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
+        content += page.extract_text()
+    return content
 
-# 6. İnterfeys Dizaynı
-st.markdown("<h1 style='text-align: center; color: #D4AF37;'>💎 A-ZEKA-ULTRA PREMIUM 💎</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #888;'>Yüksək Dəqiqlikli Analitika və Strateji Zəka Paneli</p>", unsafe_allow_html=True)
-st.write("---")
+# UI Dizayn
+st.markdown("<h1 style='text-align: center; color: #D4AF37;'>💎 A-ZEKA-ULTRA 💎</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-style: italic;'>Abdullah Mikayılovun intellektual şah əsəri.</p>", unsafe_allow_html=True)
 
-# Yaddaş Sistemi
 if "chat_session" not in st.session_state:
     st.session_state.chat_session = model.start_chat(history=[])
 
-# 7. Sidebar - Analitik Alətlər
+# Sidebar
 with st.sidebar:
-    st.header("📂 Məlumat Bazası")
-    st.write("Analiz üçün sənədləri bura yükləyin:")
-    uploaded_file = st.file_uploader("PDF, PNG və ya JPG", type=["pdf", "png", "jpg", "jpeg"])
-    
-    if st.button("Yaddaşı və Sessiyanı Yenilə"):
+    st.title("📂 Analiz Mərkəzi")
+    doc = st.file_uploader("PDF və ya Şəkil yükləyin", type=["pdf", "png", "jpg", "jpeg"])
+    if st.button("Sessiyanı Təmizlə"):
         st.session_state.chat_session = model.start_chat(history=[])
         st.rerun()
-    
-    st.write("---")
-    st.info("Bu sistem Abdullah Mikayılov tərəfindən Enterprise səviyyəli bizneslər üçün hazırlanmışdır.")
 
-# 8. Analiz Prosesi
-context_text = ""
-if uploaded_file:
-    with st.spinner("Sənəd analiz edilir, zəhmət olmasa gözləyin..."):
-        if uploaded_file.type == "application/pdf":
-            context_text = extract_pdf_text(uploaded_file)
-            st.sidebar.success("PDF uğurla oxundu!")
-        else:
-            # Şəkil analizi üçün vizualı saxlayırıq
-            img = Image.open(uploaded_file)
-            st.sidebar.image(img, caption="Analiz edilən təsvir")
+# Analiz Məntiqi
+context = ""
+if doc:
+    if doc.type == "application/pdf":
+        context = get_pdf_content(doc)
+        st.sidebar.success("PDF mətni mənimsənildi.")
+    else:
+        st.sidebar.image(Image.open(doc))
 
-# 9. Çat İnterfeysi
-for message in st.session_state.chat_session.history:
-    with st.chat_message("assistant" if message.role == "model" else "user"):
-        st.markdown(message.parts[0].text)
+# Çat
+for msg in st.session_state.chat_session.history:
+    with st.chat_message("assistant" if msg.role == "model" else "user"):
+        st.markdown(msg.parts[0].text)
 
-# Sual daxil etmə
-user_query = st.chat_input("Sənəd haqqında sual verin və ya analiz istəyin...")
+query = st.chat_input("Dərin analiz üçün əmr daxil edin...")
 
-if user_query:
+if query:
     with st.chat_message("user"):
-        st.markdown(user_query)
-
+        st.markdown(query)
+    
     with st.chat_message("assistant"):
-        with st.spinner("Dərin analiz aparılır..."):
+        with st.spinner("Canavar analiz edir..."):
             try:
-                # Əgər PDF oxunubsa, sualı kontekstlə birlikdə göndər
-                full_prompt = user_query
-                if context_text:
-                    full_prompt = f"SƏNƏD KONTEKSTİ:\n{context_text[:10000]}\n\nSUAL: {user_query}"
-                
-                if uploaded_file and uploaded_file.type != "application/pdf":
-                    # Şəkil və sualı birlikdə göndər
-                    img = Image.open(uploaded_file)
-                    response = st.session_state.chat_session.send_message([user_query, img])
+                prompt = f"KONTEKST: {context}\n\nSUAL: {query}" if context else query
+                if doc and doc.type != "application/pdf":
+                    res = st.session_state.chat_session.send_message([query, Image.open(doc)])
                 else:
-                    response = st.session_state.chat_session.send_message(full_prompt)
-                
-                st.markdown(response.text)
-            except Exception as e:
-                st.error("Limit aşımı və ya texniki xəta. (Qeyd: Satış versiyasında bu limitlər Google Cloud hesabı ilə ləğv edilir).")
+                    res = st.session_state.chat_session.send_message(prompt)
+                st.markdown(res.text)
+            except:
+                st.warning("Sistem hazırda yüksək intensivliklə işləyir. Bir neçə saniyə sonra yenidən cəhd edin.")
