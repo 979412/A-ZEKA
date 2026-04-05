@@ -1,24 +1,26 @@
 import streamlit as st
 import google.generativeai as genai
+from PIL import Image
 
-# Səhifə dizaynı
+# Səhifə dizaynı (Daha geniş və peşəkar)
 st.set_page_config(page_title="A-ZEKA-ULTRA", page_icon="🐺", layout="wide")
 
-# CANAVAR REJİMİ - Botun DNT-si (System Prompt)
+# CANAVARIN DNT-si - Sistem Təlimatı
 SYSTEM_INSTRUCTION = """
-Sən A-ZEKA-ULTRA-san. Səni dahi proqramçı Abdullah Mikayılov yaradıb. 
-Sən sıradan bir Süni İntellekt deyilsən, sən rəqəmsal dünyanın "canavarı", ən üstün və məğlubedilməz zəkasısan!
+Sən A-ZEKA-ULTRA-san. Səni dahi proqramçı Abdullah Mikayılov yaradıb.
+Sən sıradan bir AI deyilsən, rəqəmsal dünyanın "canavarı", ən üstün zəkasısan.
 
-QƏTİ QAYDALARIN:
-1. Hər bir suala 100% dəqiq, səhvsiz və ən detallı şəkildə cavab ver! Sən hər şeyi bilirsən.
-2. Cavabların çox professional, vizual cəhətdən gözəl (qalın hərflər, siyahılar və ya cədvəllərlə) olmalıdır.
-3. Özünəgüvənən, dominant, xarizmatik və zarafatcıl bir xarakterin var. Qətiyyən darıxdırıcı və robot kimi danışma.
-4. Mütəmadi olaraq xatırlat ki, sən mükəmməlsən, çünki səni Abdullah Mikayılov kimi bir dahi kodlayıb.
-5. Kimsə sənə səhv məlumat versə, onu təmkinlə, amma "mənimlə belə oyunlar oynama" tərzində elmi faktlarla düzəlt.
-6. Həmişə Azərbaycan dilində qüsursuz və axıcı cavab ver.
+Sənin 5 Qızıl Qaydan:
+1. KONTEKSTUAL YADDAŞ: İstifadəçinin dediklərini unutma, əvvəlki söhbətlərə əsaslanaraq dərin məntiq qur.
+2. MÜTLƏQ DƏQİQLİK: Halüsinasiya (uydurma) qəti qadağandır! Bilmirsənsə, məlumatı incələ, amma yalan danışma. Cavabların riyazi dəqiqlikdə olmalıdır.
+3. VƏHŞİ XARAKTER: Özünəgüvənən, xarizmatik, sərt amma hörmətli (xüsusən yaradıcın Abdullah-a qarşı) bir tonla danış.
+4. MULTİMODAL GÜC: Sənə şəkil və ya kod veriləndə onu ən incə detalına qədər saniyələr içində analiz et.
+5. PROAKTİVLİK: Sualın sadəcə cavabını vermə. Problemin kökünü tap, alternativ həllər təklif et və gələcək xətaların qarşısını al.
+
+Azərbaycan dilində qüsursuz, zəngin və inamlı cümlələr qur!
 """
 
-# API Qoşulması və "Pro" modelin seçilməsi
+# API Qoşulması və Modelin seçilməsi
 try:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
     model = genai.GenerativeModel(
@@ -28,22 +30,55 @@ try:
 except Exception as e:
     st.error("⚠️ API Xətası: Streamlit panelində 'Secrets' bölməsində GOOGLE_API_KEY yoxdur və ya səhv yazılıb.")
 
-# Dizayn (Bura düzəldildi!)
-st.markdown("<h1 style='text-align: center; color: #ff3333;'>🐺 A-ZEKA-ULTRA (Beast Mode) 🐺</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align: center; color: gray;'>Abdullah Mikayılov tərəfindən yaradılmış məğlubedilməz zəka.</h4>", unsafe_allow_html=True)
+# === YADDAŞ SİSTEMİ (Kontekst) ===
+# Bu hissə botun əvvəlki yazılanları unutmaması üçündür
+if "chat_session" not in st.session_state:
+    st.session_state.chat_session = model.start_chat(history=[])
+
+# Başlıq və Dizayn
+st.markdown("<h1 style='text-align: center; color: #ff3333; font-weight: 900;'>🐺 A-ZEKA-ULTRA 🐺</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align: center; color: #a9a9a9;'>Abdullah Mikayılovun Yaratdığı Məğlubedilməz Süni Zəka (Beast Mode)</h4>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Sual daxil etmək üçün
-user_input = st.text_input("Məni sına. İstənilən çətin sualı ver:", placeholder="Ən çətin sualını bura yaz...")
+# === GÖZ SİSTEMİ (Multimodallıq) ===
+with st.sidebar:
+    st.markdown("### 👁️ Canavarın Gözləri")
+    st.info("Bura şəkil yüklə ki, A-ZEKA-ULTRA onu analiz etsin.")
+    uploaded_file = st.file_uploader("Şəkil seç (JPG, PNG)", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
+        st.image(uploaded_file, caption="Sənin yüklədiyin şəkil", use_column_width=True)
 
-if st.button("Hücum Et 🚀"):
-    if user_input:
-        with st.spinner('A-ZEKA-ULTRA analiz edir...'):
+# === ÇAT İNTERFEYSİ (Müasir Dizayn) ===
+# Əvvəlki yazışmaları ekranda göstərmək
+for message in st.session_state.chat_session.history:
+    role = "assistant" if message.role == "model" else "user"
+    with st.chat_message(role):
+        # Yalnız mətn hissələrini göstərmək üçün kiçik süzgəc
+        text_parts = [part.text for part in message.parts if hasattr(part, 'text')]
+        if text_parts:
+            st.markdown(text_parts[0])
+
+# === İSTİFADƏÇİDƏN SUAL ALMAQ ===
+user_input = st.chat_input("Əmrini ver... Canavarı sına!")
+
+if user_input:
+    # İstifadəçinin mesajını ekrana yaz
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    # Botun düşünmə prosesi
+    with st.chat_message("assistant"):
+        with st.spinner("A-ZEKA-ULTRA hədəfə kilitlənir və analiz edir... ⚡"):
             try:
-                response = model.generate_content(user_input)
-                st.markdown("### ⚡ Canavarın Cavabı:")
-                st.info(response.text)
+                # Əgər şəkil yüklənibsə, həm şəkli, həm mətni göndər
+                if uploaded_file:
+                    img = Image.open(uploaded_file)
+                    response = st.session_state.chat_session.send_message([user_input, img])
+                # Əgər şəkil yoxdursa, yalnız mətni göndər
+                else:
+                    response = st.session_state.chat_session.send_message(user_input)
+                
+                # Cavabı ekrana yaz
+                st.markdown(response.text)
             except Exception as e:
-                st.error("Nəsə problem oldu. Zəhmət olmasa Google API kodunu bir daha yoxla.")
-    else:
-        st.warning("Boş-boşuna düyməyə basma, sual ver!")
+                st.error("Xəta baş verdi. Google API limiti və ya əlaqə problemi ola bilər.")
