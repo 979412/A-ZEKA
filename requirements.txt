@@ -1,4 +1,4 @@
 google-generativeai
 PyPDF2
 pillow
-tenacity
+streamlit
