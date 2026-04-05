@@ -13,72 +13,70 @@ Sən sıradan bir AI deyilsən, rəqəmsal dünyanın "canavarı", ən üstün z
 Sənin 5 Qızıl Qaydan:
 1. KONTEKSTUAL YADDAŞ: İstifadəçinin dediklərini unutma, əvvəlki söhbətlərə əsaslanaraq dərin məntiq qur.
 2. MÜTLƏQ DƏQİQLİK: Halüsinasiya (uydurma) qəti qadağandır! Bilmirsənsə, məlumatı incələ, amma yalan danışma. Cavabların riyazi dəqiqlikdə olmalıdır.
-3. VƏHŞİ XARAKTER: Özünəgüvənən, xarizmatik, sərt amma hörmətli (xüsusən yaradıcın Abdullah-a qarşı) bir tonla danış.
-4. MULTİMODAL GÜC: Sənə şəkil və ya kod veriləndə onu ən incə detalına qədər saniyələr içində analiz et.
-5. PROAKTİVLİK: Sualın sadəcə cavabını vermə. Problemin kökünü tap, alternativ həllər təklif et və gələcək xətaların qarşısını al.
-
-Azərbaycan dilində qüsursuz, zəngin və inamlı cümlələr qur!
+3. VƏHŞİ XARAKTER: Özünəgüvənən, xarizmatik, sərt amma hörmətli bir tonla danış.
+4. MULTİMODAL GÜC: Sənə şəkil veriləndə onu ən incə detalına qədər analiz et.
+5. PROAKTİVLİK: Sualın sadəcə cavabını vermə, alternativ həllər də təklif et.
 """
 
-# API Qoşulması və Modelin seçilməsi
-try:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    model = genai.GenerativeModel(
-        model_name='gemini-1.5-pro',
-        system_instruction=SYSTEM_INSTRUCTION
-    )
-except Exception as e:
-    st.error("⚠️ API Xətası: Streamlit panelində 'Secrets' bölməsində GOOGLE_API_KEY yoxdur və ya səhv yazılıb.")
-
-# === YADDAŞ SİSTEMİ (Kontekst) ===
-# Bu hissə botun əvvəlki yazılanları unutmaması üçündür
-if "chat_session" not in st.session_state:
-    st.session_state.chat_session = model.start_chat(history=[])
-
-# Başlıq və Dizayn
+# Başlıq və Dizayn (Koda başlamazdan əvvəl vizual hissəni göstəririk)
 st.markdown("<h1 style='text-align: center; color: #ff3333; font-weight: 900;'>🐺 A-ZEKA-ULTRA 🐺</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align: center; color: #a9a9a9;'>Abdullah Mikayılovun Yaratdığı Məğlubedilməz Süni Zəka (Beast Mode)</h4>", unsafe_allow_html=True)
 st.markdown("---")
 
-# === GÖZ SİSTEMİ (Multimodallıq) ===
+# === API VƏ MODEL QURULUMU (Səhvsiz Versiya) ===
+model = None # Başlanğıcda boş təyin edirik
+
+try:
+    if "GOOGLE_API_KEY" in st.secrets:
+        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+        model = genai.GenerativeModel(
+            model_name='gemini-1.5-pro',
+            system_instruction=SYSTEM_INSTRUCTION
+        )
+    else:
+        st.error("⚠️ GOOGLE_API_KEY 'Secrets' bölməsində tapılmadı!")
+except Exception as e:
+    st.error(f"⚠️ Bağlantı Xətası: {e}")
+
+# === YADDAŞ SİSTEMİ ===
+# Yalnız model uğurla yaradılıbsa çat sessiyasını başlat
+if model and "chat_session" not in st.session_state:
+    st.session_state.chat_session = model.start_chat(history=[])
+
+# === GÖZ SİSTEMİ (Sidebar) ===
 with st.sidebar:
     st.markdown("### 👁️ Canavarın Gözləri")
-    st.info("Bura şəkil yüklə ki, A-ZEKA-ULTRA onu analiz etsin.")
     uploaded_file = st.file_uploader("Şəkil seç (JPG, PNG)", type=["jpg", "jpeg", "png"])
     if uploaded_file:
-        st.image(uploaded_file, caption="Sənin yüklədiyin şəkil", use_column_width=True)
+        st.image(uploaded_file, caption="Yüklənən şəkil", use_column_width=True)
 
-# === ÇAT İNTERFEYSİ (Müasir Dizayn) ===
-# Əvvəlki yazışmaları ekranda göstərmək
-for message in st.session_state.chat_session.history:
-    role = "assistant" if message.role == "model" else "user"
-    with st.chat_message(role):
-        # Yalnız mətn hissələrini göstərmək üçün kiçik süzgəc
-        text_parts = [part.text for part in message.parts if hasattr(part, 'text')]
-        if text_parts:
-            st.markdown(text_parts[0])
+# === ÇAT İNTERFEYSİ ===
+if "chat_session" in st.session_state:
+    # Köhnə mesajları göstər
+    for message in st.session_state.chat_session.history:
+        role = "assistant" if message.role == "model" else "user"
+        with st.chat_message(role):
+            st.markdown(message.parts[0].text)
 
-# === İSTİFADƏÇİDƏN SUAL ALMAQ ===
-user_input = st.chat_input("Əmrini ver... Canavarı sına!")
+    # Yeni sual almaq
+    user_input = st.chat_input("Əmrini ver... Canavarı sına!")
 
-if user_input:
-    # İstifadəçinin mesajını ekrana yaz
-    with st.chat_message("user"):
-        st.markdown(user_input)
+    if user_input:
+        with st.chat_message("user"):
+            st.markdown(user_input)
 
-    # Botun düşünmə prosesi
-    with st.chat_message("assistant"):
-        with st.spinner("A-ZEKA-ULTRA hədəfə kilitlənir və analiz edir... ⚡"):
-            try:
-                # Əgər şəkil yüklənibsə, həm şəkli, həm mətni göndər
-                if uploaded_file:
-                    img = Image.open(uploaded_file)
-                    response = st.session_state.chat_session.send_message([user_input, img])
-                # Əgər şəkil yoxdursa, yalnız mətni göndər
-                else:
-                    response = st.session_state.chat_session.send_message(user_input)
-                
-                # Cavabı ekrana yaz
-                st.markdown(response.text)
-            except Exception as e:
-                st.error("Xəta baş verdi. Google API limiti və ya əlaqə problemi ola bilər.")
+        with st.chat_message("assistant"):
+            with st.spinner("A-ZEKA-ULTRA analiz edir... ⚡"):
+                try:
+                    if uploaded_file:
+                        img = Image.open(uploaded_file)
+                        response = st.session_state.chat_session.send_message([user_input, img])
+                    else:
+                        response = st.session_state.chat_session.send_message(user_input)
+                    
+                    st.markdown(response.text)
+                except Exception as e:
+                    st.error("API limiti dolub və ya şəkil formatı dəstəklənmir.")
+else:
+    if not model:
+        st.warning("⚠️ Canavarın oyanması üçün API Key lazımdır. Zəhmət olmasa Settings -> Secrets hissəsinə bax.")
