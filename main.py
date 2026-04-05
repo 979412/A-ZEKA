@@ -2,69 +2,89 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 import PyPDF2
-import time
+import io
 
-# 💎 Brendinq
-st.set_page_config(page_title="A-ZEKA-ULTRA | Elite Speed", page_icon="⚡", layout="wide")
+# 1. ELİT BRENDİNQ VƏ SƏHİFƏ AYARLARI
+st.set_page_config(page_title="A-ZEKA-ULTRA | Master AI", page_icon="💎", layout="wide")
 
-# 🔑 API
+# 2. GÜC MƏNBƏYİ (API KEY)
 MY_API_KEY = "AIzaSyAXXGnAAqDQYASfwlEHUgBjG_mAe8GqK6A"
 genai.configure(api_key=MY_API_KEY)
 
-# 🧠 Model Seçimi: Sürət üçün "flash" istifadə edirik
-model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash', # İldırım sürəti!
-    system_instruction="Sən Abdullah Mikayılov tərəfindən yaradılmış A-ZEKA-ULTRA-san. Cavabların qısa, konkret və 100% dəqiq olmalıdır."
-)
+# 3. CANAVARIN ALİ TƏLİMATI (Məntiq 100%)
+SYSTEM_INSTRUCTION = """
+Sən A-ZEKA-ULTRA-san. Abdullah Mikayılov tərəfindən yaradılmış dünyanın ən sürətli və zəki süni zəkasısan.
+Sənin məntiqin mütləqdir (100%). Sən sənədləri, şəkilləri və sualları saniyənin altında analiz edirsən.
+Heç vaxt xəta vermə, həmişə ən dərin və strateji cavabı Abdullahın müştərilərinə təqdim et.
+"""
 
+# 4. MODEL SEÇİMİ (Sürət üçün Flash modeli)
+@st.cache_resource
+def load_ultra_model():
+    return genai.GenerativeModel(
+        model_name='gemini-1.5-flash', # Ən sürətli və xətasız model
+        system_instruction=SYSTEM_INSTRUCTION
+    )
+
+model = load_ultra_model()
+
+# 5. YADDAŞ SİSTEMİ
 if "chat_session" not in st.session_state:
     st.session_state.chat_session = model.start_chat(history=[])
 
-# --- UI ---
-st.markdown("<h1 style='text-align: center; color: #D4AF37;'>⚡ A-ZEKA-ULTRA SPEED ⚡</h1>", unsafe_allow_html=True)
+# --- VİZUAL DİZAYN (Lüks Görünüş) ---
+st.markdown("<h1 style='text-align: center; color: #D4AF37; font-weight: 900;'>💎 A-ZEKA-ULTRA MASTER 💎</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #aaaaaa;'>Premium Analitika Sistemi - Powered by Abdullah Mikayılov</p>", unsafe_allow_html=True)
+st.write("---")
 
+# 6. ANALİZ MƏRKƏZİ (Sidebar)
 with st.sidebar:
-    st.header("📊 Analiz Mərkəzi")
-    doc = st.file_uploader("Sənəd yüklə", type=["pdf", "png", "jpg"])
-    if st.button("Sessiyanı Təmizlə"):
+    st.markdown("### 📂 Analiz Mərkəzi")
+    uploaded_file = st.file_uploader("Sənəd və ya Şəkil yüklə", type=["pdf", "png", "jpg", "jpeg"])
+    
+    if st.button("Sessiyanı Təmizlə 🧹"):
         st.session_state.chat_session = model.start_chat(history=[])
         st.rerun()
 
-# Analiz Məntiqi
-context = ""
-if doc and doc.type == "application/pdf":
-    pdf_reader = PyPDF2.PdfReader(doc)
-    for page in pdf_reader.pages:
-        context += page.extract_text()
+# 7. SƏNƏD EMALI (PDF Analizi)
+pdf_text = ""
+if uploaded_file and uploaded_file.type == "application/pdf":
+    reader = PyPDF2.PdfReader(uploaded_file)
+    for page in reader.pages:
+        pdf_text += page.extract_text()
 
-# Sual daxil etmə
-query = st.chat_input("Əmrini ver...")
+# 8. ÇAT İNTERFEYSİ (Mesajların göstərilməsi)
+for message in st.session_state.chat_session.history:
+    role = "assistant" if message.role == "model" else "user"
+    with st.chat_message(role):
+        st.markdown(message.parts[0].text)
 
-if query:
-    # Köhnə mesajları göstər
-    for msg in st.session_state.chat_session.history:
-        with st.chat_message("assistant" if msg.role == "model" else "user"):
-            st.markdown(msg.parts[0].text)
+# 9. İLDIRIM SÜRATLİ SUAL-CAVAB (0.6 Saniyə Məqsədi)
+user_input = st.chat_input("Dərin analiz üçün əmrinizi daxil edin...")
 
+if user_input:
     with st.chat_message("user"):
-        st.markdown(query)
+        st.markdown(user_input)
 
     with st.chat_message("assistant"):
-        response_placeholder = st.empty() # Canlı yazılma üçün yer
+        # Streaming (axınlı) cavab sistemi - İstifadəçi anında cavabı görməyə başlayır
+        response_placeholder = st.empty()
         full_response = ""
         
         try:
-            # Sürətli cavab üçün stream=True istifadə edirik
-            if doc and doc.type != "application/pdf":
-                response = st.session_state.chat_session.send_message([query, Image.open(doc)], stream=True)
+            # Şəkil varsa şəkil analizi, yoxsa mətn/PDF analizi
+            if uploaded_file and uploaded_file.type != "application/pdf":
+                img = Image.open(uploaded_file)
+                response = st.session_state.chat_session.send_message([user_input, img], stream=True)
             else:
-                prompt = f"Sənəd: {context}\nSual: {query}" if context else query
+                prompt = f"SƏNƏD MƏTNİ: {pdf_text}\n\nSUAL: {user_input}" if pdf_text else user_input
                 response = st.session_state.chat_session.send_message(prompt, stream=True)
 
             for chunk in response:
                 full_response += chunk.text
                 response_placeholder.markdown(full_response + "▌") # Yazılma effekti
             
-            response_placeholder.markdown(full_response)
+            response_placeholder.markdown(full_response) # Final cavab
+            
         except Exception as e:
-            st.error("Bağlantı yenilənir... Zəhmət olmasa bir daha yaz.")
+            st.error("Sistem yenilənir, bir neçə saniyə sonra yenidən cəhd edin.")
